@@ -6,6 +6,14 @@ import java.util.HashSet;
 import java.util.Set;
 
 @Entity
+@NamedEntityGraphs({
+        @NamedEntityGraph(name = "graph.AuthorBooks",
+                attributeNodes = @NamedAttributeNode("books")),
+
+        @NamedEntityGraph(name = "graph.AuthorBooksReviews",
+                attributeNodes = @NamedAttributeNode(value = "books", subgraph = "books"),
+                subgraphs = @NamedSubgraph(name = "books",
+                        attributeNodes = @NamedAttributeNode("reviews")))})
 public class Author implements Serializable {
 
     private static final long serialVersionUID = 1L;

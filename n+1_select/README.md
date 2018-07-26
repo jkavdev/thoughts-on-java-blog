@@ -1,6 +1,6 @@
 # How to find and fix n+1 Select issues with Hibernate
 
-# What is the n+1 select issue and how to find it
+# Part1 - What is the n+1 select issue and how to find it
 
 * Teste que gera o n+1
 
@@ -46,3 +46,66 @@
 * Habilitando logs das consultas do hibernate
 
         log4j.logger.org.hibernate.SQL=debug
+        
+# Part2 - Solving n+1 select issues with `@NamedEntityGraph`       
+
+* definindo um mapeamento para a consulta, definindo o que trazer durante a consulta com `@NamedEntityGraph`
+* `name = "graph.AuthorBooks"` definimos um nome especifico para a consulta
+* `attributeNodes = @NamedAttributeNode("books")` definimos o nome do atributo que queremos adicionar a consulta
+* no caso estamos indicando ao trazer os autores, tambem traga os livros
+
+        @NamedEntityGraph(name = "graph.AuthorBooks",
+                attributeNodes = @NamedAttributeNode("books")) 
+                    
+* criando teste para a consulta
+* obtemos o objeto que executa a consulta com grafo `EntityGraph<?> graph = em.createEntityGraph("graph.AuthorBooks");`
+* realizamos a consulta passando o objeto com o grafo `em.createQuery("...", Author.class).setHint("javax.persistence.loadgraph", graph).getResultList();`
+* estamos indicando a implementacao do objeto de grafo `.setHint("javax.persistence.loadgraph", graph)`
+
+        @Test
+            public void selectAuthors_GraphBooks() {
+                EntityGraph<?> graph = em.createEntityGraph("graph.AuthorBooks");
+                List<Author> authors = em.createQuery("SELECT DISTINCT a FROM Author a",
+                        Author.class).setHint("javax.persistence.loadgraph", graph).getResultList();
+                for (Author a : authors) {
+                    System.out.println("Author "
+                            + a.getFirstName()
+                            + " "
+                            + a.getLastName()
+                            + " wrote "
+                            + a.getBooks().stream().map(b -> b.getTitle())
+                            .collect(Collectors.joining(", ")));
+                }
+            }  
+            
+* adicionando um atributo do atributo no grafo
+* no do atributo a ser adicionado na consulta com o grafo `attributeNodes = @NamedAttributeNode(value = "books", subgraph = "books"),`
+* adicionando o atributo do atributo `subgraphs = @NamedSubgraph(name = "books", attributeNodes = @NamedAttributeNode("reviews")))})`
+
+        @NamedEntityGraph(name = "graph.AuthorBooksReviews",
+                        attributeNodes = @NamedAttributeNode(value = "books", subgraph = "books"),
+                        subgraphs = @NamedSubgraph(name = "books",
+                                attributeNodes = @NamedAttributeNode("reviews")))})                              
+
+* no caso estamos indicando para trazer os livros, junto com todos os reviews do livro
+
+* realizando teste
+
+        @Test
+            public void selectAuthors_GraphBooksAndReviews() {
+                EntityGraph<?> graph = em.createEntityGraph("graph.AuthorBooksReviews");
+                List<Author> authors = em.createQuery("SELECT DISTINCT a FROM Author a",
+                        Author.class).setHint("javax.persistence.loadgraph", graph).getResultList();
+                for (Author a : authors) {
+                    System.out.println("Author "
+                            + a.getFirstName()
+                            + " "
+                            + a.getLastName()
+                            + " wrote "
+                            + a.getBooks()
+                            .stream()
+                            .map(b -> b.getTitle() + "("
+                                    + b.getReviews().size() + " reviews)")
+                            .collect(Collectors.joining(", ")));
+                }
+            }                                
