@@ -108,4 +108,65 @@
                                     + b.getReviews().size() + " reviews)")
                             .collect(Collectors.joining(", ")));
                 }
-            }                                
+            }        
+            
+# Part3 - Solving n+1 select issues with dynamic `EntityGraphs`  
+
+* adicionando grafo dinamicamente com entityGraphs
+* adicionando depedencia que gera os metadados das entidades
+
+        <dependency>
+            <groupId>org.hibernate</groupId>
+            <artifactId>hibernate-jpamodelgen</artifactId>
+            <version>4.3.11.Final</version>
+        </dependency>
+        
+* indicando ao maven para gerar os metadados
+
+        <plugin>
+            <artifactId>maven-compiler-plugin</artifactId>
+            <version>3.2</version>
+            <configuration>
+                <compilerArguments>
+                    <processor>org.hibernate.jpamodelgen.JPAMetaModelEntityProcessor</processor>
+                </compilerArguments>
+            </configuration>
+        </plugin>        
+        
+* as classes geradas estarao no target junto das entidades  
+
+        Author.class
+        Author_.class
+        Book.class
+        Book_.class
+        Rating.class
+        Review.class
+        Review_.class        
+        
+* realizando a consulta com grafos dinamicos
+* criando um grafo da entidade autor `em.createEntityGraph(Author.class);`
+* adicionando um subgrafo dinamicamente `graph.addSubgraph(Author_.books);` atraves do metadato que indica o atributo da entidade
+* adicionando um subgrafo do subgrafo dinamicamente `bookSubGraph.addSubgraph(Book_.reviews);` atraves do metadato que indica o atributo da subentidade
+
+        @Test
+            public void selectAuthors_GraphBooksAndReviews() {
+                EntityGraph graph = em.createEntityGraph(Author.class);
+                Subgraph<Book> bookSubGraph = graph.addSubgraph(Author_.books);
+                bookSubGraph.addSubgraph(Book_.reviews);
+                List<Author> authors = em.createQuery("SELECT DISTINCT a FROM Author a",
+                        Author.class)
+                        .setHint("javax.persistence.fetchgraph", graph)
+                        .getResultList();
+                for (Author a : authors) {
+                    System.out.println("Author "
+                            + a.getFirstName()
+                            + " "
+                            + a.getLastName()
+                            + " wrote "
+                            + a.getBooks()
+                            .stream()
+                            .map(b -> b.getTitle() + "("
+                                    + b.getReviews().size() + " reviews)")
+                            .collect(Collectors.joining(", ")));
+                }
+            }        
