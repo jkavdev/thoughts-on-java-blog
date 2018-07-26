@@ -13,44 +13,25 @@ import javax.persistence.Persistence;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.thoughts.on.java.JpaJunitConfig;
 import org.thoughts.on.java.model.Author;
 
 /**
  * @author Thorben
  */
-public class TestStatistics {
-
-    private EntityManagerFactory emf;
-
-    @Before
-    public void init() {
-        emf = Persistence.createEntityManagerFactory("my-persistence-unit");
-    }
-
-    @After
-    public void close() {
-        emf.close();
-    }
+public class TestStatistics extends JpaJunitConfig {
 
     @Test
     public void selectAuthors() {
-        EntityManager em = emf.createEntityManager();
-        em.getTransaction().begin();
-
-        List<Author> authors = em.createQuery("SELECT a FROM Author a",
+        List<Author> authors = getEntityManager().createQuery("SELECT a FROM Author a",
                 Author.class).getResultList();
 
-        for (Author a : authors) {
-            System.out.println("Author "
-                    + a.getFirstName()
-                    + " "
-                    + a.getLastName()
-                    + " wrote "
-                    + a.getBooks().size()
-                    + " books.");
-        }
-
-        em.getTransaction().commit();
-        em.close();
+        authors.forEach(a -> System.out.println("Author "
+                + a.getFirstName()
+                + " "
+                + a.getLastName()
+                + " wrote "
+                + a.getBooks().size()
+                + " books."));
     }
 }

@@ -5,62 +5,39 @@
  */
 package org.thoughts.on.java.part3.entitygraph;
 
-import java.util.List;
-import java.util.stream.Collectors;
-import javax.persistence.EntityGraph;
-import javax.persistence.EntityManager;
-import javax.persistence.EntityManagerFactory;
-import javax.persistence.Persistence;
-import javax.persistence.Subgraph;
-
-import org.junit.After;
-import org.junit.Before;
 import org.junit.Test;
+import org.thoughts.on.java.JpaJunitConfig;
 import org.thoughts.on.java.model.Author;
 import org.thoughts.on.java.model.Author_;
 import org.thoughts.on.java.model.Book;
 import org.thoughts.on.java.model.Book_;
 
-public class TestEntityGraph {
+import javax.persistence.EntityGraph;
+import javax.persistence.Subgraph;
+import java.util.List;
+import java.util.stream.Collectors;
 
-    private EntityManagerFactory emf;
-
-    @Before
-    public void init() {
-        emf = Persistence.createEntityManagerFactory("my-persistence-unit");
-    }
-
-    @After
-    public void close() {
-        emf.close();
-    }
+public class TestEntityGraph extends JpaJunitConfig {
 
     @Test
     public void selectAuthors_GraphBooksAndReviews() {
-        EntityManager em = emf.createEntityManager();
-
-        EntityGraph graph = em.createEntityGraph(Author.class);
+        EntityGraph graph = getEntityManager().createEntityGraph(Author.class);
         Subgraph<Book> bookSubGraph = graph.addSubgraph(Author_.books);
         bookSubGraph.addSubgraph(Book_.reviews);
 
-        List<Author> authors = em.createQuery("SELECT DISTINCT a FROM Author a",
+        List<Author> authors = getEntityManager().createQuery("SELECT DISTINCT a FROM Author a",
                 Author.class)
                 .setHint("javax.persistence.fetchgraph", graph)
                 .getResultList();
 
-        for (Author a : authors) {
-            System.out.println("Author "
-                    + a.getFirstName()
-                    + " "
-                    + a.getLastName()
-                    + " wrote "
-                    + a.getBooks()
-                    .stream()
-                    .map(b -> b.getTitle() + "("
-                            + b.getReviews().size() + " reviews)")
-                    .collect(Collectors.joining(", ")));
-        }
-
-        em.close();
+        authors.forEach(a -> System.out.println("Author "
+                + a.getFirstName()
+                + " "
+                + a.getLastName()
+                + " wrote "
+                + a.getBooks()
+                .stream()
+                .map(b -> b.getTitle() + "(" + b.getReviews().size() + " reviews)")
+                .collect(Collectors.joining(", "))));
     }
 }
